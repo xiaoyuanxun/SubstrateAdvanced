@@ -33,7 +33,6 @@ fn it_works_for_kitty_created_event() {
 		assert_ok!(KittiesModule::create(RuntimeOrigin::signed(account_id)));
 		let kitty = KittiesModule::kitties(kitty_id).unwrap();
 
-
 		System::assert_has_event(Event::KittyCreated { who: account_id, kitty_id, kitty }.into() );
     });	
 }
@@ -168,6 +167,160 @@ fn it_works_for_kitty_transferred_event() {
 		);
 		System::assert_has_event(
 			Event::KittyTransferred { from: to_account_id, to: account_id, kitty_id}.into()
+		);
+	});
+}
+
+#[test]
+fn it_works_for_sale() {
+	new_test_ext().execute_with(|| {
+		let kitty_id: u32 = 0;
+		let account_id: u64 = 1;
+
+		// 创建kitty
+		assert_ok!(KittiesModule::create(RuntimeOrigin::signed(account_id)));
+		assert_eq!(
+			KittiesModule::kitty_owner(kitty_id).unwrap(),
+            account_id
+		);
+
+		// sale成功
+		assert_ok!(
+			KittiesModule::sale(RuntimeOrigin::signed(account_id), kitty_id)
+		);
+		assert_eq!(
+			KittiesModule::kitty_on_sale(kitty_id).is_some(),
+			true
+		);
+
+		// sale时InvalidKittyId
+		assert_noop!(
+			KittiesModule::sale(RuntimeOrigin::signed(account_id), kitty_id + 1),
+            Error::<Test>::InvalidKittyId
+		);
+
+		// sale时不是owner
+		assert_noop!(
+			KittiesModule::sale(RuntimeOrigin::signed(2u64), kitty_id),
+            Error::<Test>::NotOwner
+		);
+
+		// sale时已经AlreadyOnSale
+		assert_noop!(
+			KittiesModule::sale(RuntimeOrigin::signed(account_id), kitty_id),
+            Error::<Test>::AlreadyOnSale
+		);
+	});
+}
+
+#[test]
+fn it_works_for_kitty_sale_event() {
+	new_test_ext().execute_with(|| {
+		let kitty_id: u32 = 0;
+		let account_id: u64 = 1;
+
+		assert_ok!(KittiesModule::create(RuntimeOrigin::signed(account_id)));
+		assert_eq!(
+			KittiesModule::kitty_owner(kitty_id).unwrap(),
+            account_id
+		);
+
+		assert_ok!(
+			KittiesModule::sale(RuntimeOrigin::signed(account_id), kitty_id)
+		);
+		assert_eq!(
+			KittiesModule::kitty_on_sale(kitty_id).is_some(),
+			true
+		);
+
+		System::assert_has_event(
+			Event::KittyOnSale { who: account_id, kitty_id }.into() 
+		);
+	});
+}
+
+#[test]
+fn it_works_for_buy() {
+	new_test_ext().execute_with(|| {
+		let kitty_id: u32 = 0;
+		let sale_account_id: u64 = 1;
+		let buy_account_id: u64 = 2;
+
+		// 创建 kitty
+		assert_ok!(KittiesModule::create(RuntimeOrigin::signed(sale_account_id)));
+		assert_eq!(
+			KittiesModule::kitty_owner(kitty_id).unwrap(),
+            sale_account_id
+		);
+
+		// buy时notOnSale
+		assert_noop!(
+			KittiesModule::buy(RuntimeOrigin::signed(buy_account_id), kitty_id),
+            Error::<Test>::NotOnSale
+		);
+
+	    // sale kitty
+		assert_ok!(
+			KittiesModule::sale(RuntimeOrigin::signed(sale_account_id), kitty_id)
+		);
+		assert_eq!(
+			KittiesModule::kitty_on_sale(kitty_id).is_some(),
+			true
+		);
+
+		// buy时InvalidKittyId
+		assert_noop!(
+			KittiesModule::sale(RuntimeOrigin::signed(buy_account_id), kitty_id + 1),
+            Error::<Test>::InvalidKittyId
+		);
+
+		// buy kitty 成功
+		assert_ok!(KittiesModule::buy(RuntimeOrigin::signed(buy_account_id), kitty_id));
+		assert_eq!(
+			KittiesModule::kitty_owner(kitty_id).unwrap(),
+            buy_account_id
+		);
+
+		// buy时AlreadyOwned
+		assert_noop!(
+			KittiesModule::buy(RuntimeOrigin::signed(buy_account_id), kitty_id),
+            Error::<Test>::AlreadyOwned
+		);
+	});
+}
+
+#[test]
+fn it_works_for_buy_event() {
+	new_test_ext().execute_with(|| {
+		let kitty_id: u32 = 0;
+		let sale_account_id: u64 = 1;
+		let buy_account_id: u64 = 2;
+
+		// 创建 kitty
+		assert_ok!(KittiesModule::create(RuntimeOrigin::signed(sale_account_id)));
+		assert_eq!(
+			KittiesModule::kitty_owner(kitty_id).unwrap(),
+            sale_account_id
+		);
+
+	    // sale kitty
+		assert_ok!(
+			KittiesModule::sale(RuntimeOrigin::signed(sale_account_id), kitty_id)
+		);
+		assert_eq!(
+			KittiesModule::kitty_on_sale(kitty_id).is_some(),
+			true
+		);
+
+		// buy kitty 成功
+		assert_ok!(KittiesModule::buy(RuntimeOrigin::signed(buy_account_id), kitty_id));
+		assert_eq!(
+			KittiesModule::kitty_owner(kitty_id).unwrap(),
+            buy_account_id
+		);
+
+		System::assert_has_event(
+			Event::KittyBought { who: buy_account_id, kitty_id }.into() 
 		);
 	});
 }

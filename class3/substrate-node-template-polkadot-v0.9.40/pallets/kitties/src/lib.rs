@@ -101,6 +101,7 @@ pub mod pallet {
 			KittyOwner::<T>::insert(kitty_id, &who);
 			
 			Self::deposit_event(Event::KittyCreated { who, kitty_id, kitty });
+			
 			Ok(())
 		}
 
@@ -139,6 +140,7 @@ pub mod pallet {
 			KittyParents::<T>::insert(kitty_id, (kitty_id_1, kitty_id_2));
 
 			Self::deposit_event(Event::KittyBreed { who, kitty_id, kitty });
+			
 			Ok(())
 		}
 
@@ -158,6 +160,7 @@ pub mod pallet {
 			KittyOwner::<T>::insert(kitty_id, &to);
 			
 			Self::deposit_event(Event::KittyTransferred { from: who, to, kitty_id });
+			
 			Ok(())
 		}
 
@@ -172,7 +175,7 @@ pub mod pallet {
 			Self::kitties(kitty_id).ok_or::<DispatchError>(Error::<T>::InvalidKittyId.into())?;
 
 			ensure!(Self::kitty_owner(kitty_id) == Some(who.clone()), Error::<T>::NotOwner);
-			ensure!(Self::kitty_on_sale(kitty_id).is_some(), Error::<T>::AlreadyOnSale);
+			ensure!(Self::kitty_on_sale(kitty_id).is_none(), Error::<T>::AlreadyOnSale);
 
 			<KittyOnSale<T>>::insert(kitty_id, ());
 			Self::deposit_event(Event::KittyOnSale { who, kitty_id });
